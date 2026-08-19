@@ -1,0 +1,27 @@
+{
+  "name": "Sample: intake to notification",
+  "nodes": [
+    { "id": "a1", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [-420, 0], "parameters": {} },
+    { "id": "a2", "name": "Every morning", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1, "position": [-420, 200], "parameters": {} },
+    { "id": "a3", "name": "Normalise payload", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [-140, 100], "parameters": {} },
+    { "id": "a4", "name": "Has an email?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [140, 100], "parameters": {} },
+    { "id": "a5", "name": "Fetch profile", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4, "position": [420, 20], "parameters": {} },
+    { "id": "a6", "name": "Drop", "type": "n8n-nodes-base.noOp", "typeVersion": 1, "position": [420, 200], "parameters": {} },
+    { "id": "a7", "name": "Send notification", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4, "position": [700, 20], "parameters": {} },
+    { "id": "a8", "name": "Notes", "type": "n8n-nodes-base.stickyNote", "typeVersion": 1, "position": [-440, -220], "parameters": { "content": "## Sample workflow\nA small graph used to check that rendering works.\nNothing here talks to a real service.", "width": 420, "height": 150 } }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Normalise payload", "type": "main", "index": 0 }]] },
+    "Every morning": { "main": [[{ "node": "Normalise payload", "type": "main", "index": 0 }]] },
+    "Normalise payload": { "main": [[{ "node": "Has an email?", "type": "main", "index": 0 }]] },
+    "Has an email?": {
+      "main": [
+        [{ "node": "Fetch profile", "type": "main", "index": 0 }],
+        [{ "node": "Drop", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch profile": { "main": [[{ "node": "Send notification", "type": "main", "index": 0 }]] }
+  },
+  "settings": {},
+  "active": false
+}

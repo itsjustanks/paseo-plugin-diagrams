@@ -1,6 +1,6 @@
 {
   "name": "paseo-plugin-diagrams",
-  "description": "View HTML/SVG diagrams from inside Paseo, on desktop and on your phone.",
+  "description": "View HTML/SVG diagrams and n8n workflow graphs from inside Paseo, on desktop and on your phone.",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -16,6 +16,8 @@
     "diagram",
     "svg",
     "chart",
+    "n8n",
+    "workflow",
     "visualization"
   ],
   "scripts": {

@@ -1,8 +1,8 @@
 # Paseo Diagrams
 
-A [Paseo](https://paseo.sh) plugin for looking at diagrams — architecture drawings, flowcharts, ER models, Gantt charts, anything an agent generates as HTML with inline SVG — from inside Paseo, on your desktop **and** on your phone.
+A [Paseo](https://paseo.sh) plugin for looking at things that are meant to be looked at — HTML/SVG diagrams **and** n8n workflow graphs — from inside Paseo, on your desktop **and** on your phone.
 
-No tunnel. No public URL. No manual PNG export step.
+No manual PNG export step, no browser session, and nothing leaves your machine unless you explicitly share it.
 
 It renders **any** self-contained HTML file and has no dependency on a particular generator, skill or template — if it draws in a browser, it shows up here.
 
@@ -14,7 +14,7 @@ Coding agents are good at producing diagrams as self-contained HTML with inline 
 - Paseo plugin surfaces are React Native, and the only modules a client surface may import are `react`, `react-native`, `@tanstack/react-query`, `zod` and `@paseo/plugin`. There is no WebView and no iframe, so **a plugin cannot render HTML directly either.**
 - Paseo's built-in browser tabs are hosted by the desktop app, so they are not a phone-viewing path.
 
-The usual workarounds are worse than the problem: exporting a PNG by hand for every revision, or serving the file through a tunnel, which means a public unauthenticated URL and another daemon to keep running.
+The usual workarounds are worse than the problem: exporting a PNG by hand after every revision, or permanently serving files through a tunnel, which means a public unauthenticated URL and another daemon to keep running. Rendering on demand needs neither, and sharing stays something you opt into per item.
 
 ## What this does instead
 
@@ -28,12 +28,19 @@ The image travels back over the connection Paseo already has, so it works anywhe
 
 ## Features
 
-- **Sidebar item “Diagrams”** — your diagram library, reachable from anywhere.
-- **Workspace panel “Diagrams”** — the library plus any diagram HTML in the current workspace. Also in the Command Center (`⌘K` / `Ctrl+K`) as “Open diagrams”.
-- **Smart workspace scanning** — depth-limited, skips `node_modules`, `.git`, `dist`, `build` and friends, and only lists `.html` files that actually contain an `<svg>` or `<canvas>`, so ordinary web pages don't clutter the list.
-- **Render presets** — Wide (1600×1000), Card (1200×630), Tall (1200×1600), Square (1400×1400), at 1× or 2×.
+- **Sidebar item and workspace panel**, plus “Open diagrams and workflows” in the Command Center (`⌘K` / `Ctrl+K`).
+- **Two kinds of thing, one list:**
+  - **HTML diagrams** — any self-contained `.html` with inline SVG. Render presets Wide (1600×1000), Card (1200×630), Tall (1200×1600), Square (1400×1400).
+  - **n8n workflows** — `.json` exports on disk, and the workflows on a live n8n instance via its REST API. The graph is drawn here: nodes coloured by what they do, curved connections with arrowheads, branch indices on `IF`/`Switch`, disabled nodes dimmed, sticky notes behind the graph, light or dark to match your theme.
+- **Deep links back into n8n** — any workflow carrying an id gets a `…/workflow/<id>` link, so a workflow an agent just created or edited through an n8n MCP server is one press from being open in the editor.
+- **Optional sharing** — publish a rendered diagram or workflow on a link, using a tunnel binary you already have. Nothing is installed, and it falls back to a loopback URL rather than failing.
+- **Smart workspace scanning** — depth-limited, skips `node_modules`, `.git`, `dist`, `build` and friends. `.html` must contain an `<svg>` or `<canvas>` and `.json` must parse as a workflow, so ordinary files don't clutter the list.
 - **Open the real thing** — on desktop, one press opens the interactive HTML in the browser on the daemon machine, so hover states and animation still work.
 - **Themed and responsive** — colours come from the active Paseo theme, layout adapts to compact clients.
+
+## What is drawn from a workflow, and what is not
+
+The workflow renderer reads node **names**, node **types**, **connections** and **sticky notes**. It never reads node `parameters` or `credentials`, so no URL, token, query, expression or credential name can reach an image or a shared link.
 
 ## Requirements
 
@@ -57,7 +64,7 @@ Run this on the machine the daemon runs on. Plugins are installed per daemon.
 
 ## Use it
 
-Save diagram HTML into `~/Diagrams` and open **Diagrams** in the sidebar.
+Save diagram HTML into `~/Diagrams`, and n8n workflow JSON into `~/n8n-workflows`. Open **Diagrams** in the sidebar.
 
 Point an agent at it directly:
 
@@ -67,10 +74,14 @@ Anything already sitting in a workspace is picked up too — open the **Diagrams
 
 ### Configuration
 
-| Variable             | Default        | Meaning                                    |
-| -------------------- | -------------- | ------------------------------------------ |
-| `PASEO_DIAGRAMS_DIR` | `~/Diagrams`   | The library folder the plugin watches.     |
-| `CHROME_BIN`         | auto-detected  | Path to Chrome/Chromium on the daemon box. |
+| Variable                    | Default            | Meaning                                            |
+| --------------------------- | ------------------ | -------------------------------------------------- |
+| `PASEO_DIAGRAMS_DIR`        | `~/Diagrams`       | Folder scanned for diagram HTML.                    |
+| `PASEO_N8N_DIR`             | `~/n8n-workflows`  | Folder scanned for workflow JSON.                   |
+| `N8N_BASE_URL`              | unset              | Your n8n. Enables the live list and editor links.   |
+| `N8N_API_KEY`               | unset              | n8n API key, required with `N8N_BASE_URL`.          |
+| `PASEO_PREVIEW_SHARE_PORT`  | `8790`             | Loopback port used while sharing.                   |
+| `CHROME_BIN`                | auto-detected      | Path to Chrome/Chromium on the daemon box.          |
 
 These are read by the daemon, so set them where the daemon can see them.
 
@@ -78,11 +89,14 @@ These are read by the daemon, so set them where the daemon can see them.
 
 Three RPCs, all handled in the plugin's own subprocess beside the daemon:
 
-| RPC               | Does                                                                       |
-| ----------------- | -------------------------------------------------------------------------- |
-| `diagrams.list`   | Scans the library and, optionally, the workspace directory.                |
-| `diagrams.render` | Screenshots one file with headless Chrome, returns a base64 PNG.           |
-| `diagrams.open`   | Opens the file in the browser on the daemon machine.                       |
+| RPC                     | Does                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `preview.list`          | Scans both library folders, the workspace, and a live n8n if configured.                 |
+| `preview.render`        | Screenshots a diagram, or draws a workflow graph, and returns a base64 PNG.              |
+| `preview.open`          | Returns the n8n editor URL for a workflow, or opens a diagram on the daemon machine.     |
+| `preview.share`         | Serves the page from memory and exposes it through an installed tunnel, if there is one. |
+| `preview.share-status`  | What is currently published, and how it is reachable.                                    |
+| `preview.share-stop`    | Closes the tunnel and drops every published page.                                        |
 
 The client surface holds no filesystem access and no browser logic; it renders a list and an `<Image>`.
 
@@ -90,11 +104,28 @@ The client surface holds no filesystem access and no browser logic; it renders a
 
 Plugin backends run **unsandboxed** on the daemon machine — that is true of every Paseo plugin, so it is worth being explicit about what this one does with that access:
 
-- Every path the client sends is `realpath`-resolved and must resolve **inside the library folder or the current workspace directory**. Anything else is refused, so a panel cannot be talked into reading arbitrary files.
-- Only `.html` and `.htm` files are accepted.
+- Every path the client sends is `realpath`-resolved and must resolve **inside a library folder or the current workspace directory**. Anything else is refused, so a panel cannot be talked into reading arbitrary files.
+- Only `.html`/`.htm` and `.json` are accepted, matched against what the reference claims to be.
+- The n8n API key is read from the daemon environment, used only for `GET /api/v1/workflows`, never sent to the client surface, and API error bodies are not echoed back.
 - Rendering happens in a throwaway temp directory that is removed afterwards, and Chrome is killed if it exceeds its timeout.
 - Rendered images are capped before being sent, so a runaway diagram cannot flood the connection.
-- Nothing is uploaded, served, or exposed to a network. The image goes back over your existing Paseo connection.
+- Nothing is uploaded or exposed to a network unless you press **Share**. Rendering alone goes back over your existing Paseo connection.
+
+## Sharing
+
+**Share** serves the rendered page from memory on loopback. If `cloudflared`, `ngrok` or `tailscale` is already on the daemon's `PATH` it is used to expose that page and you get a public link; otherwise you get the loopback URL and a note saying so. Nothing is ever installed, and nothing is written to disk.
+
+A tunnel link is **public and unauthenticated**. Only the page you shared is reachable: URLs are random UUIDs, the root returns a stub rather than a listing, and `noindex` is set. **Stop sharing** closes the tunnel and drops every published page; so does reloading or disabling the plugin.
+
+## A note on `@n8n_io/n8n-demo-component`
+
+n8n publishes an official web component for workflow previews, and using it for an authentic canvas is an obvious idea. It was tried here and dropped, for three reasons worth recording:
+
+1. **It renders remotely.** The component mounts an iframe pointing at `n8n-preview-service.internal.n8n.cloud` and posts the workflow JSON into it, so the whole workflow — parameters and all — leaves your machine.
+2. **It cannot be pointed at self-hosted n8n.** The `src` attribute suggests it can, but that route does not exist on a self-hosted instance; it answers `404` with `default-src 'none'`.
+3. **It does not render headless.** The iframe is lazy-loaded behind an `IntersectionObserver` and a cross-frame handshake, neither of which completes under a headless screenshot. Verified blank at 1600×1000 from both a `file://` page and a real HTTP origin, against the live preview service.
+
+Drawing the graph directly costs a few hundred lines, keeps the plugin dependency-free, works offline, and never sends a workflow anywhere.
 
 ## Development
 
@@ -121,7 +152,8 @@ One hard-won note for anyone doing headless Chrome work: **do not pass `--user-d
 ## Credits
 
 - [Paseo](https://github.com/getpaseo/paseo) by the Paseo team — the app and plugin system this is built on.
-- [diagram-design](https://github.com/cathrynlavery/diagram-design) by Cathryn Lavery — the agent skill this was written to view. It is not required, but it pairs well: point it at `~/Diagrams` and the output shows up here.
+- [n8n](https://github.com/n8n-io/n8n) — the workflow automation tool whose export format this reads.
+- [diagram-design](https://github.com/cathrynlavery/diagram-design) by Cathryn Lavery — one nice way to author diagram HTML. Not required: point anything at `~/Diagrams` and it shows up here.
 
 ## License
 

@@ -1,7 +1,7 @@
 import type { PluginSurfaceProps } from "@paseo/plugin";
 import React from "react";
-import { DiagramBrowser } from "./browser.client";
+import { PreviewBrowser } from "./browser.client";
 
-export function DiagramLibrary({ theme, layout }: PluginSurfaceProps) {
-  return <DiagramBrowser theme={theme} layout={layout} heading="Diagram library" />;
+export function PreviewLibrary({ theme, layout }: PluginSurfaceProps) {
+  return <PreviewBrowser theme={theme} layout={layout} heading="Diagrams" />;
 }

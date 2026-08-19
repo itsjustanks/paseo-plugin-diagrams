@@ -1,15 +1,27 @@
 import type { PluginContext } from "@paseo/plugin";
-import { handleList, handleOpen, handleRender } from "./diagrams.server";
-import { listDiagrams, openDiagram, renderDiagram } from "./diagrams.shared";
-import { DiagramLibrary } from "./library.client";
-import { DiagramsPanel } from "./panel.client";
+import { handleOpen, handleRender, handleShare } from "./handlers.server";
+import {
+  listItems,
+  openItem,
+  renderItem,
+  shareItem,
+  shareStatus,
+  stopShare,
+} from "./items.shared";
+import { PreviewLibrary } from "./library.client";
+import { PreviewPanel } from "./panel.client";
+import { status, stop } from "./share.server";
+import { listAll } from "./sources.server";
 
 export default function contribute(plugin: PluginContext) {
-  plugin.handle(listDiagrams, handleList);
-  plugin.handle(renderDiagram, handleRender);
-  plugin.handle(openDiagram, handleOpen);
+  plugin.handle(listItems, ({ directory }) => listAll(directory));
+  plugin.handle(renderItem, handleRender);
+  plugin.handle(shareItem, handleShare);
+  plugin.handle(openItem, handleOpen);
+  plugin.handle(shareStatus, () => status());
+  plugin.handle(stopShare, () => stop());
 
-  plugin.addSurface("library", DiagramLibrary);
+  plugin.addSurface("library", PreviewLibrary);
   plugin.addSidebarItem({
     id: "library",
     title: "Diagrams",
@@ -20,21 +32,22 @@ export default function contribute(plugin: PluginContext) {
   plugin.addWorkspacePanel({
     id: "diagrams",
     title: "Diagrams",
-    icon: "Workflow",
+    icon: "Shapes",
     context: "workspace",
-    Component: DiagramsPanel,
+    Component: PreviewPanel,
   });
 
   plugin.addCommandCenterItem({
     id: "open-diagrams",
-    title: "Open diagrams",
-    icon: "Workflow",
-    keywords: ["chart", "diagram", "svg", "render"],
+    title: "Open diagrams and workflows",
+    icon: "Shapes",
+    keywords: ["diagram", "chart", "svg", "n8n", "workflow"],
     context: "workspace",
     onSelect({ openPanel }) {
       openPanel("diagrams");
     },
   });
 
-  return () => {};
+  // Never leave a tunnel or listener behind when the plugin stops.
+  return () => stop();
 }
