@@ -10,7 +10,7 @@ It renders **any** self-contained HTML file and has no dependency on a particula
 
 Coding agents are good at producing diagrams as self-contained HTML with inline SVG. Paseo cannot show you one:
 
-- Paseo chat renders `markdown`, `diff`, `image` and `code` artifacts. HTML is not on that list.
+- Paseo chat renders `markdown`, `diff`, `image` and `code` artifacts. HTML is not on that list — an image is, which is what **Send to chat** exploits.
 - Paseo plugin surfaces are React Native, and the only modules a client surface may import are `react`, `react-native`, `@tanstack/react-query`, `zod` and `@paseo/plugin`. There is no WebView and no iframe, so **a plugin cannot render HTML directly either.**
 - Paseo's built-in browser tabs are hosted by the desktop app, so they are not a phone-viewing path.
 
@@ -32,6 +32,7 @@ The image travels back over the connection Paseo already has, so it works anywhe
 - **Two kinds of thing, one list:**
   - **HTML diagrams** — any self-contained `.html` with inline SVG. Render presets Wide (1600×1000), Card (1200×630), Tall (1200×1600), Square (1400×1400).
   - **n8n workflows** — `.json` exports on disk, and the workflows on a live n8n instance via its REST API. The graph is drawn here: nodes coloured by what they do, curved connections with arrowheads, branch indices on `IF`/`Switch`, disabled nodes dimmed, sticky notes behind the graph, light or dark to match your theme.
+- **Send to chat** — from an agent's **Diagrams** panel, one press posts the rendered picture into that agent's conversation as an image, so the chart lands in the chat thread instead of staying trapped in a panel. The agent sees it too, which is useful when you want it to look at what it just drew.
 - **Deep links back into n8n** — any workflow carrying an id gets a `…/workflow/<id>` link, so a workflow an agent just created or edited through an n8n MCP server is one press from being open in the editor.
 - **Optional sharing** — publish a rendered diagram or workflow on a link, using a tunnel binary you already have. Nothing is installed, and it falls back to a loopback URL rather than failing.
 - **Smart workspace scanning** — depth-limited, skips `node_modules`, `.git`, `dist`, `build` and friends. `.html` must contain an `<svg>` or `<canvas>` and `.json` must parse as a workflow, so ordinary files don't clutter the list.
@@ -97,6 +98,8 @@ Three RPCs, all handled in the plugin's own subprocess beside the daemon:
 | `preview.share`         | Serves the page from memory and exposes it through an installed tunnel, if there is one. |
 | `preview.share-status`  | What is currently published, and how it is reachable.                                    |
 | `preview.share-stop`    | Closes the tunnel and drops every published page.                                        |
+
+Sending to chat does not need an RPC: the panel renders through `preview.render`, then posts the PNG with the Paseo SDK's `agents.ref(id).send(text, { images })`, which is why it only appears in the agent-context panel — that is the only place the plugin knows whose conversation to post into.
 
 The client surface holds no filesystem access and no browser logic; it renders a list and an `<Image>`.
 

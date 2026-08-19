@@ -1,5 +1,5 @@
 import type { PluginTheme } from "@paseo/plugin";
-import { useRpc } from "@paseo/plugin";
+import { usePaseo, useRpc } from "@paseo/plugin";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -134,11 +134,14 @@ export function PreviewBrowser({
   layout,
   directory,
   heading,
+  agentId,
 }: {
   theme: PluginTheme;
   layout: Layout;
   directory?: string;
   heading: string;
+  /** Present in an agent panel, which is what makes "Send to chat" possible. */
+  agentId?: string;
 }) {
   const compact = layout.compact;
   const styles = useMemo(() => makeStyles(theme, compact), [theme, compact]);
@@ -149,6 +152,7 @@ export function PreviewBrowser({
   const open = useRpc(openItem);
   const status = useRpc(shareStatus);
   const stop = useRpc(stopShare);
+  const paseo = usePaseo();
 
   const [selected, setSelected] = useState<Item | null>(null);
   const [preset, setPreset] = useState<PresetId>("wide");
@@ -201,6 +205,31 @@ export function PreviewBrowser({
   });
   const openTarget = useMutation({
     mutationFn: () => open({ ref: selected!.ref, directory }),
+  });
+
+  /**
+   * Post the rendered picture into the agent's conversation. Paseo accepts
+   * base64 images on a message, so the chart lands in chat rather than staying
+   * trapped in this panel - and the agent can see what it drew.
+   */
+  const sendToChat = useMutation({
+    mutationFn: async () => {
+      const rendered =
+        image.data ??
+        (await render({
+          ref: selected!.ref,
+          directory,
+          width: isWorkflow ? undefined : size.width,
+          height: isWorkflow ? undefined : size.height,
+          scale,
+          dark,
+        }));
+      const base64 = rendered.dataUri.split(",")[1] ?? "";
+      await paseo.agents.ref(agentId!).send(selected!.name, {
+        images: [{ data: base64, mimeType: "image/png" }],
+      });
+      return rendered.bytes;
+    },
   });
 
   const items = catalog.data?.items ?? [];
@@ -293,6 +322,14 @@ export function PreviewBrowser({
             styles={styles}
           />
         ) : null}
+        {selected && agentId ? (
+          <Chip
+            label={sendToChat.isPending ? "Sending…" : "Send to chat"}
+            active={false}
+            onPress={() => sendToChat.mutate()}
+            styles={styles}
+          />
+        ) : null}
         {selected ? (
           <Chip
             label={startShare.isPending ? "Sharing…" : "Share"}
@@ -343,6 +380,10 @@ export function PreviewBrowser({
           </>
         ) : null}
 
+        {sendToChat.isError ? <Text style={styles.error}>{messageOf(sendToChat.error)}</Text> : null}
+        {sendToChat.isSuccess ? (
+          <Text style={styles.caption}>Sent to this agent's chat as an image.</Text>
+        ) : null}
         {openTarget.isError ? <Text style={styles.error}>{messageOf(openTarget.error)}</Text> : null}
         {opened ? (
           <View style={styles.linkBox}>

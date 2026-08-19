@@ -1,4 +1,5 @@
 import type { PluginContext } from "@paseo/plugin";
+import { PreviewAgentPanel } from "./agent.client";
 import { handleOpen, handleRender, handleShare } from "./handlers.server";
 import {
   listItems,
@@ -35,6 +36,27 @@ export default function contribute(plugin: PluginContext) {
     icon: "Shapes",
     context: "workspace",
     Component: PreviewPanel,
+  });
+
+  // Agent context as well, because that is the only place we know whose chat to
+  // post a rendered chart into.
+  plugin.addWorkspacePanel({
+    id: "diagrams-agent",
+    title: "Diagrams",
+    icon: "Shapes",
+    context: "agent",
+    Component: PreviewAgentPanel,
+  });
+
+  plugin.addCommandCenterItem({
+    id: "send-diagram-to-chat",
+    title: "Send a diagram to this chat",
+    icon: "Shapes",
+    keywords: ["diagram", "chart", "n8n", "workflow", "image"],
+    context: "agent",
+    onSelect({ openPanel }) {
+      openPanel("diagrams-agent");
+    },
   });
 
   plugin.addCommandCenterItem({
