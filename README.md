@@ -4,6 +4,8 @@ A [Paseo](https://paseo.sh) plugin for looking at diagrams — architecture draw
 
 No tunnel. No public URL. No manual PNG export step.
 
+It renders **any** self-contained HTML file and has no dependency on a particular generator, skill or template — if it draws in a browser, it shows up here.
+
 ## The problem
 
 Coding agents are good at producing diagrams as self-contained HTML with inline SVG. Paseo cannot show you one:
