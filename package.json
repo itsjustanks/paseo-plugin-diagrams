@@ -1,0 +1,33 @@
+{
+  "name": "paseo-plugin-diagrams",
+  "description": "View HTML/SVG diagrams from inside Paseo, on desktop and on your phone.",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Ankit Paliwal (https://github.com/itsjustanks)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/itsjustanks/paseo-plugin-diagrams.git"
+  },
+  "homepage": "https://github.com/itsjustanks/paseo-plugin-diagrams#readme",
+  "keywords": [
+    "paseo",
+    "paseo-plugin",
+    "diagram",
+    "svg",
+    "chart",
+    "visualization"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@getpaseo/client": "^0.4.0",
+    "@tanstack/react-query": "^5.90.11",
+    "@types/react": "~19.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
+  }
+}

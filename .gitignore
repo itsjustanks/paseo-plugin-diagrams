@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+
+# Generated per project by `paseo plugin init` and pinned to one Paseo CLI
+# version. Regenerate it locally rather than tracking a stale copy.
+paseo-plugin.d.ts
